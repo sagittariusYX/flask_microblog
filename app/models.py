@@ -23,7 +23,19 @@ class User(db.Model):
         secondaryjoin = (followers.c.followed_id == id),
         backref = db.backref('followers', lazy = 'dynamic'),
         lazy = 'dynamic')
-    
+
+    @staticmethod
+    def make_unique_nickname(nickname):
+        if User.query.filter_by(nickname = nickname).first() == None:
+            return nickname
+        version = 2
+        while True:
+            new_nickname = nickname + str(version)
+            if User.query.filter_by(nickname = new_nickname).first() == None:
+                break
+            version += 1
+        return new_nickname
+
     def is_authenticated(self):
         return True
 
@@ -38,9 +50,6 @@ class User(db.Model):
 
     def avatar(self, size):
         return 'http://www.gravatar.com/avatar/' + md5(self.email).hexdigest() + '?d=mm&s=' + str(size)
-
-    def __repr__(self):
-        return '<User %r>' % (self.nickname)
 
     def follow(self, user):
         if not self.is_following(user):
@@ -58,17 +67,8 @@ class User(db.Model):
     def followed_posts(self):
         return Post.query.join(followers, (followers.c.followed_id == Post.user_id)).filter(followers.c.follower_id == self.id).order_by(Post.timestamp.desc())
 
-    @staticmethod
-    def make_unique_nickname(nickname):
-        if User.query.filter_by(nickname = nickname).first() == None:
-            return nickname
-        version = 2
-        while True:
-            new_nickname = nickname + str(version)
-            if User.query.filter_by(nickname = new_nickname).first() == None:
-                break
-            version += 1
-        return new_nickname
+    def __repr__(self):
+        return '<User %r>' % (self.nickname)
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key = True)
